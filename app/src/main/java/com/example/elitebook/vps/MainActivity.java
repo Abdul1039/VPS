@@ -31,22 +31,18 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 import it.sephiroth.android.library.exif2.ExifInterface;
 
 public class MainActivity extends AppCompatActivity {
     
-    static final int REQUEST_IMAGE_CAPTURE = 1;
-    static final int REQUEST_TAKE_PHOTO = 1;
-    private static final int CAMERA_REQUEST_CODE = 1;
+    private static final int REQUEST_TAKE_PHOTO = 1;
     private static String LABEL;
-    String currentPhotoPath;
-    File photoFile = null;
-    byte[] bytes;
-    private Button captureImage, uploadImage;
+    private String currentPhotoPath;
+    private File photoFile = null;
     private EditText getLabel;
     private ImageView mImageView;
-    private FirebaseStorage Storage;
     private StorageReference mStorageRef;
     private ProgressDialog mProgress;
     private Uri photoURI;
@@ -69,15 +65,14 @@ public class MainActivity extends AppCompatActivity {
         
         getLabel = findViewById(R.id.getLabel);
         mImageView = findViewById(R.id.imageView);
-        captureImage = findViewById(R.id.capture);
-        uploadImage = findViewById(R.id.upload);
+        Button captureImage = findViewById(R.id.capture);
+        Button uploadImage = findViewById(R.id.upload);
         
         uploadImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 
                 LABEL = getLabel.getText().toString();
-                
                 
                 mProgress.setMessage("Uploading Image");
                 mProgress.show();
@@ -94,10 +89,8 @@ public class MainActivity extends AppCompatActivity {
                         mProgress.dismiss();
                         
                         Toast.makeText(MainActivity.this, "Uploading Finished", Toast.LENGTH_LONG).show();
-                        
                     }
                 });
-                
             }
             
         });
@@ -105,9 +98,7 @@ public class MainActivity extends AppCompatActivity {
         captureImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-//                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-//                startActivityForResult(intent, CAMERA_REQUEST_CODE);
+                
                 dispatchTakePictureIntent();
                 
                 
@@ -128,18 +119,14 @@ public class MainActivity extends AppCompatActivity {
         // Ensure that there's a camera activity to handle the intent
         if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
             // Create the File where the photo should go
-            
             try {
                 photoFile = createImageFile();
             } catch (IOException ex) {
                 // Error occurred while creating the File
-                
             }
             // Continue only if the File was successfully created
             if (photoFile != null) {
-                photoURI = FileProvider.getUriForFile(this, getPackageName(),
-                        photoFile);
-                Log.e("PATH", photoFile.getAbsolutePath());
+                photoURI = FileProvider.getUriForFile(this, getPackageName(), photoFile);
                 
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
                 takePictureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -150,20 +137,18 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     
-    public Location getLocation() {
+    private Location getLocation() {
         // Get the location manager
         LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         Criteria criteria = new Criteria();
         String bestProvider = locationManager.getBestProvider(criteria, false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            
+                Toast.makeText(this, "Location Permission Required", Toast.LENGTH_SHORT).show();
             } else {
                 Location location = locationManager.getLastKnownLocation(bestProvider);
-                double lat, lon;
+                
                 try {
-                    lat = location.getLatitude();
-                    lon = location.getLongitude();
                     return location;
                 } catch (NullPointerException e) {
                     e.printStackTrace();
@@ -179,20 +164,14 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         
         if (requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK) {
-            
-            
             try {
                 writeGPS();
                 galleryAddPic();
             } catch (IOException e) {
-                
                 Log.e("Check", e.getMessage());
                 e.printStackTrace();
             }
-            
             mImageView.setImageURI(photoURI);
-            
-            
         }
     }
     
@@ -201,22 +180,19 @@ public class MainActivity extends AppCompatActivity {
         exif.readExif(photoFile.getAbsolutePath(), ExifInterface.Options.OPTION_ALL);
         
         Location location = getLocation();
-        exif.addGpsTags(location.getLatitude(), location.getLongitude());
+        if (location != null)
+            exif.addGpsTags(location.getLatitude(), location.getLongitude());
+        else exif.addGpsTags(0, 0);
         exif.addGpsDateTimeStampTag(System.currentTimeMillis());
         exif.buildTag(1, LABEL);
         exif.writeExif(photoFile.getAbsolutePath(), photoFile.getAbsolutePath());
-        bytes = exif.getThumbnailBytes();
-        
-        
-        Log.e("LatLong", exif.getLatLongAsDoubles()[0] + " : " + exif.getLatLongAsDoubles()[1]);
-        
-        
     }
     
     private File createImageFile() throws IOException {
         // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
         String imageFileName = "JPEG_" + timeStamp + "_";
+        
         File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
         
         File image = File.createTempFile(
@@ -224,7 +200,6 @@ public class MainActivity extends AppCompatActivity {
                 ".jpeg",         /* suffix */
                 storageDir      /* directory */
         );
-        
         // Save a file: path for use with ACTION_VIEW intents
         currentPhotoPath = image.getAbsolutePath();
         return image;
