@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "188151992584",
+    "firebase_url": "https://vps-d8a8f.firebaseio.com",
+    "project_id": "vps-d8a8f",
+    "storage_bucket": "vps-d8a8f.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:188151992584:android:bd9e17d56f0c16da67dcbd",
+        "android_client_info": {
+          "package_name": "com.example.elitebook.vps"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "188151992584-tdnff63i6rgrmh8q350kr0imm82416i1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.elitebook.vps",
+            "certificate_hash": "71f907feeca40cc2fa39fa9dc5bcfbf40a4f42f5"
+          }
+        },
+        {
+          "client_id": "188151992584-8pf0shfal8kv8tsrp64qfqesgkri3i0a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCg1hcO8FPnwvl2kcmV7HK1yopnEUAfxMg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "188151992584-8pf0shfal8kv8tsrp64qfqesgkri3i0a.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
