@@ -4,7 +4,6 @@ import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Location;
@@ -20,7 +19,6 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -36,6 +34,11 @@ import com.github.amlcurran.showcaseview.targets.Target;
 import com.github.amlcurran.showcaseview.targets.ViewTarget;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
@@ -58,15 +61,14 @@ public class MainActivity extends AppCompatActivity {
     private LocationManager manager;
     private String currentPhotoPath;
     private File photoFile = null;
-    private EditText getLabel, getLabel1;
     private ImageView mImageView;
     private StorageReference mStorageRef;
     private ProgressDialog mProgress;
     private Uri photoURI;
     private StorageReference filepath;
-    private ShowcaseView.Builder builder1, builder2, builder3;
-    private SharedPreferences sp;
-    private SharedPreferences.Editor editor;
+    private DatabaseReference database;
+    private ShowcaseView.Builder builder2, builder3;
+    
     private Spinner getSaveLabels;
     private List<String> list;
     private ArrayAdapter<String> adapter;
@@ -80,14 +82,11 @@ public class MainActivity extends AppCompatActivity {
         
         //create firebase instance
         mStorageRef = FirebaseStorage.getInstance().getReference();
+        database = FirebaseDatabase.getInstance().getReference();
+        
         mProgress = new ProgressDialog(this);
         
-        sp = getSharedPreferences("LABELS", MODE_PRIVATE);
-        
         manager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        
-        getLabel = findViewById(R.id.getLabel);
-        getLabel1 = findViewById(R.id.getLabel1);
         
         mImageView = findViewById(R.id.imageView);
         
@@ -96,22 +95,34 @@ public class MainActivity extends AppCompatActivity {
         
         getSaveLabels = findViewById(R.id.getSaveLabels);
         
+        
+        //initialize label list adapter
         list = new ArrayList<>();
-        
-        list.add("Default");
-        
-        list.addAll(sp.getAll().keySet());
-        
-        
         adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_spinner_dropdown_item, list);
         getSaveLabels.setAdapter(adapter);
         
+        //fetch label list from firebase database
+        database.child("Photos").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                list.clear();
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    if (snapshot.getValue() != null)
+                        list.add(snapshot.getValue().toString());
+                }
+                adapter.notifyDataSetChanged();
+            }
+            
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+            
+            }
+        });
         
         //Select label path from dropdown list(Spinner)
         getSaveLabels.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                Log.e("Spinner 2", parent.getAdapter().getItem(position).toString());
                 
                 LABEL = parent.getAdapter().getItem(position).toString();
                 
@@ -128,23 +139,6 @@ public class MainActivity extends AppCompatActivity {
         uploadImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                
-                LABEL = getLabel.getText().toString();
-                editor = sp.edit();
-                if (!sp.contains(LABEL) && !LABEL.equals("")) {
-                    editor.putString(LABEL, LABEL);
-                    editor.apply();
-                    
-                    list.clear();
-                    list.add("Default");
-                    list.addAll(sp.getAll().keySet());
-                    adapter = new ArrayAdapter<>(MainActivity.this,
-                            android.R.layout.simple_spinner_dropdown_item,
-                            list);
-                    getSaveLabels.setAdapter(adapter);
-                }
-                
-                
                 if (photoURI == null) {
                     
                     Toast.makeText(MainActivity.this, "Capture Image First", Toast.LENGTH_SHORT).show();
@@ -204,36 +198,22 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         
-        
         //when user enter first time we will display a user guide
-        
         showCaseDisplay();
-        if (!builder1.build().isShowing()) {
-            getLabel.setVisibility(View.VISIBLE);
-            getLabel1.setVisibility(View.GONE);
-        }
+        
         
     }
     
     private void showCaseDisplay() {
         
-        Target viewTarget2 = new ViewTarget(R.id.getLabel1, this);
         Target viewTarget3 = new ViewTarget(R.id.capture, this);
         Target viewTarget4 = new ViewTarget(R.id.upload, this);
         
         
-        builder1 = new ShowcaseView.Builder(this);
+        // builder1 = new ShowcaseView.Builder(this);
         
         builder2 = new ShowcaseView.Builder(this);
         builder3 = new ShowcaseView.Builder(this);
-        
-        
-        builder1.setTarget(viewTarget2)
-                .setStyle(R.style.CustomShowcaseTheme3)
-                .withMaterialShowcase()
-                .setContentTitle("Label")
-                .setContentText("Set your label for image")
-                .hideOnTouchOutside().singleShot(1);
         
         
         builder2.setTarget(viewTarget3)
@@ -250,35 +230,7 @@ public class MainActivity extends AppCompatActivity {
                 .setContentTitle("Upload")
                 .setContentText("Save your image to our cloud")
                 .hideOnTouchOutside().singleShot(3);
-        
-        builder1.setShowcaseEventListener(new OnShowcaseEventListener() {
-            @Override
-            public void onShowcaseViewHide(ShowcaseView showcaseView) {
-                
-                getLabel1.setVisibility(View.GONE);
-                getLabel.setVisibility(View.VISIBLE);
-                builder2.build();
-                
-            }
-            
-            @Override
-            public void onShowcaseViewDidHide(ShowcaseView showcaseView) {
-            
-            }
-            
-            @Override
-            public void onShowcaseViewShow(ShowcaseView showcaseView) {
-                
-                
-                getLabel1.setVisibility(View.VISIBLE);
-                getLabel.setVisibility(View.GONE);
-            }
-            
-            @Override
-            public void onShowcaseViewTouchBlocked(MotionEvent motionEvent) {
-            
-            }
-        });
+        builder2.build();
         builder2.setShowcaseEventListener(new OnShowcaseEventListener() {
             @Override
             public void onShowcaseViewHide(ShowcaseView showcaseView) {
@@ -375,7 +327,7 @@ public class MainActivity extends AppCompatActivity {
             
             //display captured image
             mImageView.setImageURI(photoURI);
-        }else photoURI = null;
+        } else photoURI = null;
     }
     
     @Override
